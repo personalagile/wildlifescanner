@@ -2,16 +2,12 @@ from __future__ import annotations
 
 import logging
 from pathlib import Path
-from typing import List
-
- # lazy import cv2 in functions
 
 from .config import AppConfig
 from .detectors.base import AnimalDetector
 from .models import VideoSegment
 from .processing.video import extract_segments, probe_video
 from .segmenter import compute_segments
-
 
 VIDEO_EXTS = (".mp4", ".mov", ".avi", ".mkv", ".m4v")
 
@@ -25,18 +21,24 @@ def analyze_and_extract(
     cfg: AppConfig,
     detector: AnimalDetector,
     logger: logging.Logger,
-) -> List[Path]:
+) -> list[Path]:
+    # lazy import cv2 in functions
     import cv2  # type: ignore
+
     fps, frame_count, duration = probe_video(video_path)
     logger.info(
-        f"Analyzing: {video_path.name} | fps={fps:.2f} frames={frame_count} duration={duration:.2f}s"
+        "Analyzing: %s | fps=%.2f frames=%d duration=%.2fs",
+        video_path.name,
+        fps,
+        frame_count,
+        duration,
     )
 
     cap = cv2.VideoCapture(str(video_path))
     if not cap.isOpened():
         raise RuntimeError(f"Cannot open video: {video_path}")
 
-    activity_times: List[float] = []
+    activity_times: list[float] = []
     frame_idx = 0
     stride = max(1, int(cfg.frame_stride))
 
@@ -57,7 +59,7 @@ def analyze_and_extract(
     finally:
         cap.release()
 
-    segments: List[VideoSegment] = compute_segments(
+    segments: list[VideoSegment] = compute_segments(
         activity_times,
         video_duration=duration,
         preroll_sec=cfg.preroll_sec,
@@ -70,7 +72,7 @@ def analyze_and_extract(
         logger.info("No activity detected — no segments extracted.")
         return []
 
-    logger.info(f"Detected segments: {[(round(s.start,2), round(s.end,2)) for s in segments]}")
+    logger.info(f"Detected segments: {[(round(s.start, 2), round(s.end, 2)) for s in segments]}")
 
     outputs = extract_segments(video_path, cfg.output_dir, segments, logger)
     return outputs

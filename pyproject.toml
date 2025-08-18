@@ -15,6 +15,8 @@ target-version = ["py310"]
 [tool.ruff]
 line-length = 100
 src = ["wildlifescanner", "tests"]
+
+[tool.ruff.lint]
 select = [
   "E", "F",   # pycodestyle + pyflakes
   "I",         # isort
@@ -35,4 +37,3 @@ markers = [
   "integration: long-running or heavy tests (e.g., model inference)",
   "video_sets: iterate test video directories for presence/absence validation",
 ]
-

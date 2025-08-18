@@ -3,8 +3,8 @@ from __future__ import annotations
 import logging
 import threading
 import time
+from collections.abc import Callable
 from pathlib import Path
-from typing import Callable, Set
 
 from watchdog.events import FileSystemEventHandler
 from watchdog.observers import Observer
@@ -12,7 +12,12 @@ from watchdog.observers import Observer
 from .pipeline import is_video_file
 
 
-def wait_until_stable(path: Path, stable_seconds: float, poll_interval: float = 0.5, timeout: float = 600.0) -> bool:
+def wait_until_stable(
+    path: Path,
+    stable_seconds: float,
+    poll_interval: float = 0.5,
+    timeout: float = 600.0,
+) -> bool:
     """
     Wait until file size and mtime remain stable for `stable_seconds`.
     """
@@ -46,12 +51,17 @@ def wait_until_stable(path: Path, stable_seconds: float, poll_interval: float = 
 
 
 class _VideoEventHandler(FileSystemEventHandler):
-    def __init__(self, logger: logging.Logger, on_ready: Callable[[Path], None], stable_seconds: float):
+    def __init__(
+        self,
+        logger: logging.Logger,
+        on_ready: Callable[[Path], None],
+        stable_seconds: float,
+    ):
         super().__init__()
         self.logger = logger
         self.on_ready = on_ready
         self.stable_seconds = stable_seconds
-        self._processing: Set[Path] = set()
+        self._processing: set[Path] = set()
 
     def _schedule_process(self, p: Path) -> None:
         if p in self._processing:
@@ -87,7 +97,12 @@ class _VideoEventHandler(FileSystemEventHandler):
             self._schedule_process(p)
 
 
-def watch_directory(input_dir: Path, on_video_ready: Callable[[Path], None], stable_seconds: float, logger: logging.Logger) -> None:
+def watch_directory(
+    input_dir: Path,
+    on_video_ready: Callable[[Path], None],
+    stable_seconds: float,
+    logger: logging.Logger,
+) -> None:
     event_handler = _VideoEventHandler(logger, on_video_ready, stable_seconds)
     observer = Observer()
     observer.schedule(event_handler, str(input_dir), recursive=False)

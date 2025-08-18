@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Optional, Sequence, Tuple
+from collections.abc import Sequence
 
 from ..models import Detection
 
@@ -13,9 +13,9 @@ class RegionSelector:
 
     def suggest_crop(
         self,
-        frame_size: Tuple[int, int],  # (width, height)
+        frame_size: tuple[int, int],  # (width, height)
         detections: Sequence[Detection],
-    ) -> Optional[Tuple[int, int, int, int]]:
+    ) -> tuple[int, int, int, int] | None:
         """
         Optionally returns a crop rectangle (x, y, w, h); otherwise None.
         Default: None (no crop).

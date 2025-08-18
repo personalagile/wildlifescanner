@@ -2,14 +2,13 @@ from __future__ import annotations
 
 import os
 from pathlib import Path
-import logging
 
 import pytest
 
 from wildlifescanner.config import AppConfig
 from wildlifescanner.detectors.factory import create_detector
-from wildlifescanner.pipeline import analyze_and_extract, is_video_file
 from wildlifescanner.logging_setup import setup_logging
+from wildlifescanner.pipeline import analyze_and_extract, is_video_file
 
 RUN_VIDEO_TESTS = os.getenv("RUN_VIDEO_TESTS", "0") == "1"
 VIDEOS_ROOT = Path(__file__).parent / "data"

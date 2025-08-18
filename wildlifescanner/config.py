@@ -1,9 +1,9 @@
 from __future__ import annotations
 
+import contextlib
 import os
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Optional
 
 from dotenv import dotenv_values
 
@@ -49,21 +49,25 @@ def _get_env_from_file(env_path: Path) -> dict[str, str]:
     return {}
 
 
-def _coerce_float(value: Optional[str], default: float) -> float:
+def _coerce_float(value: str | None, default: float) -> float:
     try:
         return float(value) if value is not None else default
     except ValueError:
         return default
 
 
-def _coerce_int(value: Optional[str], default: int) -> int:
+def _coerce_int(value: str | None, default: int) -> int:
     try:
         return int(value) if value is not None else default
     except ValueError:
         return default
 
 
-def load_config(cli_input: Optional[Path], cli_output: Optional[Path], cli_detector: Optional[str]) -> AppConfig:
+def load_config(
+    cli_input: Path | None,
+    cli_output: Path | None,
+    cli_detector: str | None,
+) -> AppConfig:
     """
     Load configuration with the following priority order:
     1) CLI arguments (input/output/detector)
@@ -76,13 +80,16 @@ def load_config(cli_input: Optional[Path], cli_output: Optional[Path], cli_detec
     env_from_input = _get_env_from_file(input_dir / ".env")
 
     # 2) Output: CLI > .env > default: ./output next to input
-    output_dir = (
-        cli_output
-        or Path(env_from_input.get("OUTPUT_DIR")) if env_from_input.get("OUTPUT_DIR") else None
-    )
-    if output_dir is None:
-        default_output = input_dir.parent / "output"
-        output_dir = Path(os.getenv("OUTPUT_DIR", str(default_output))).resolve()
+    output_dir: Path
+    if cli_output is not None:
+        output_dir = cli_output
+    else:
+        env_out = env_from_input.get("OUTPUT_DIR")
+        if env_out is not None:
+            output_dir = Path(env_out)
+        else:
+            default_output = input_dir.parent / "output"
+            output_dir = Path(os.getenv("OUTPUT_DIR", str(default_output))).resolve()
 
     # 3) Detector: CLI > .env > default
     detector = cli_detector or env_from_input.get("DETECTOR", "YOLO").upper()
@@ -119,11 +126,8 @@ def load_config(cli_input: Optional[Path], cli_output: Optional[Path], cli_detec
     log_level = env_from_input.get("LOG_LEVEL", "INFO").upper()
 
     # Ensure the output directory exists (test expectation)
-    try:
+    with contextlib.suppress(Exception):
         output_dir.mkdir(parents=True, exist_ok=True)
-    except Exception:
-        # If creation fails, it will be logged later on startup
-        pass
 
     return AppConfig(
         input_dir=input_dir,

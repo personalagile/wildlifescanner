@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-from pathlib import Path
-
 from wildlifescanner.models import VideoSegment
 from wildlifescanner.processing.video import format_segment_filename
 

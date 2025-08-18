@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Iterable, List, Sequence
+from collections.abc import Sequence
 
 from .models import VideoSegment
 
@@ -12,7 +12,7 @@ def compute_segments(
     postroll_sec: float,
     min_activity_sec: float,
     merge_gap_sec: float,
-) -> List[VideoSegment]:
+) -> list[VideoSegment]:
     """
     Build segments from timestamps where activity was detected.
 
@@ -24,7 +24,7 @@ def compute_segments(
         return []
 
     times = sorted(float(t) for t in activity_times if t >= 0.0)
-    intervals: List[VideoSegment] = []
+    intervals: list[VideoSegment] = []
     for t in times:
         start = max(0.0, t - preroll_sec)
         end = min(video_duration, t + postroll_sec)
@@ -34,7 +34,7 @@ def compute_segments(
     if not intervals:
         return []
 
-    merged: List[VideoSegment] = []
+    merged: list[VideoSegment] = []
     cur = intervals[0]
     for seg in intervals[1:]:
         if seg.start <= cur.end + merge_gap_sec:

@@ -28,7 +28,9 @@ YOLO_MODEL=yolov8n.pt
 PREROLL_SEC=2.5
 MIN_ACTIVITY_SEC=0.7
 ANIMAL_CLASSES=fox, deer
-        """.strip().format(out=tmp_path / "out")
+        """.strip().format(
+            out=tmp_path / "out"
+        )
     )
 
     cfg = load_config(input_dir, None, None)

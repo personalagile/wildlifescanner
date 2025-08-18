@@ -1,13 +1,13 @@
 from __future__ import annotations
 
 import logging
+from collections.abc import Iterable
 from pathlib import Path
-from typing import Iterable, List, Tuple
 
 from ..models import VideoSegment
 
 
-def probe_video(path: Path) -> Tuple[float, int, float]:
+def probe_video(path: Path) -> tuple[float, int, float]:
     import cv2  # type: ignore
 
     cap = cv2.VideoCapture(str(path))
@@ -23,6 +23,7 @@ def probe_video(path: Path) -> Tuple[float, int, float]:
 def _probe_duration_ffmpeg(path: Path) -> float:
     try:
         import ffmpeg  # type: ignore
+
         info = ffmpeg.probe(str(path))
         for s in info.get("streams", []):
             if s.get("codec_type") == "video":
@@ -45,11 +46,11 @@ def extract_segments(
     output_dir: Path,
     segments: Iterable[VideoSegment],
     logger: logging.Logger,
-) -> List[Path]:
+) -> list[Path]:
     output_dir.mkdir(parents=True, exist_ok=True)
     base = input_video.stem
     ext = input_video.suffix or ".mp4"
-    paths: List[Path] = []
+    paths: list[Path] = []
     for i, seg in enumerate(segments, start=1):
         out_path = output_dir / format_segment_filename(base, i, seg, ext)
         try:
@@ -65,11 +66,11 @@ def extract_segments(
 
 def _cut_stream_copy(inp: Path, out: Path, seg: VideoSegment) -> None:
     import ffmpeg  # type: ignore
+
     start = max(0.0, seg.start)
     dur = max(0.0, seg.end - seg.start)
     (
-        ffmpeg
-        .input(str(inp), ss=start)
+        ffmpeg.input(str(inp), ss=start)
         .output(str(out), t=dur, c="copy", movflags="faststart")
         .overwrite_output()
         .run(capture_stdout=True, capture_stderr=True)
@@ -78,11 +79,11 @@ def _cut_stream_copy(inp: Path, out: Path, seg: VideoSegment) -> None:
 
 def _cut_reencode(inp: Path, out: Path, seg: VideoSegment) -> None:
     import ffmpeg  # type: ignore
+
     start = max(0.0, seg.start)
     dur = max(0.0, seg.end - seg.start)
     (
-        ffmpeg
-        .input(str(inp), ss=start)
+        ffmpeg.input(str(inp), ss=start)
         .output(
             str(out),
             t=dur,

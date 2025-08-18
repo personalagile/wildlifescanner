@@ -2,8 +2,6 @@ from __future__ import annotations
 
 from pathlib import Path
 
-import pytest
-
 from wildlifescanner.config import _coerce_float, _coerce_int, load_config
 
 

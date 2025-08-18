@@ -1,7 +1,7 @@
 from __future__ import annotations
 
+from collections.abc import Sequence
 from dataclasses import dataclass
-from typing import Sequence
 
 
 @dataclass(frozen=True)
@@ -17,7 +17,7 @@ class Detection:
 @dataclass(frozen=True)
 class VideoSegment:
     start: float  # seconds
-    end: float    # seconds
+    end: float  # seconds
 
     def duration(self) -> float:
         return max(0.0, self.end - self.start)
