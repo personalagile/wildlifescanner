@@ -37,11 +37,12 @@ def test_factory_yolo_branch_sysmodules_stub(monkeypatch):
     class _YOLO:
         def __init__(self, **kwargs):
             self.kw = kwargs
+
         def close(self):
             pass
 
     mod.YOLODetector = _YOLO
-    sys.modules['wildlifescanner.detectors.yolo'] = mod
+    sys.modules["wildlifescanner.detectors.yolo"] = mod
 
     det = create_detector(
         "yolo",

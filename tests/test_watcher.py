@@ -14,6 +14,7 @@ def test_event_handler_on_created_and_moved(monkeypatch: pytest.MonkeyPatch, tmp
     class _T:
         def __init__(self, target=None, daemon=None):
             self.target = target
+
         def start(self):
             if self.target:
                 self.target()
@@ -41,10 +42,12 @@ def test_event_handler_on_created_and_moved(monkeypatch: pytest.MonkeyPatch, tmp
 def test_event_handler_dedup_scheduling(monkeypatch: pytest.MonkeyPatch, tmp_path: Path):
     # Capture threads without running them automatically
     threads: list[object] = []
+
     class _T:
         def __init__(self, target=None, daemon=None):
             self.target = target
             threads.append(self)
+
         def start(self):
             # do not run yet
             pass
@@ -77,12 +80,16 @@ def test_watch_directory_keyboardinterrupt(monkeypatch: pytest.MonkeyPatch, tmp_
             self.started = False
             self.stopped = False
             self.joined = False
+
         def schedule(self, handler, path, recursive=False):
             self.scheduled.append((handler, path, recursive))
+
         def start(self):
             self.started = True
+
         def stop(self):
             self.stopped = True
+
         def join(self):
             self.joined = True
 

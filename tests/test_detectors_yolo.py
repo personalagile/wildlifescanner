@@ -10,14 +10,14 @@ import pytest
 
 def _torch_stub(mps_avail=False, cuda_avail=False, raise_on_backends=False):
     if raise_on_backends:
+
         class _B:
             def __getattr__(self, _):
                 raise RuntimeError("boom")
+
         backends = _B()
     else:
-        backends = types.SimpleNamespace(
-            mps=types.SimpleNamespace(is_available=lambda: mps_avail)
-        )
+        backends = types.SimpleNamespace(mps=types.SimpleNamespace(is_available=lambda: mps_avail))
     cuda = types.SimpleNamespace(is_available=lambda: cuda_avail)
     return types.SimpleNamespace(backends=backends, cuda=cuda)
 
@@ -82,10 +82,13 @@ def _boxes(xyxy=True, conf=True, cls=True):
     class _Arr:
         def __init__(self, arr):
             self.arr = np.array(arr, dtype=float)
+
         def cpu(self):
             return self
+
         def numpy(self):
             return self.arr
+
     b = types.SimpleNamespace()
     if xyxy:
         b.xyxy = _Arr([[1, 2, 3, 4], [10, 20, 30, 40]])

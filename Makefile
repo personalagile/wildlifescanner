@@ -6,6 +6,7 @@ PYTEST := .venv/bin/pytest
 RUFF := .venv/bin/ruff
 BLACK := .venv/bin/black
 MYPY := .venv/bin/mypy
+PRECOMMIT := .venv/bin/pre-commit
 
 INPUT ?= ./input
 OUTPUT ?= ./output
@@ -37,6 +38,11 @@ lint:
 .PHONY: typecheck
 typecheck:
 	$(MYPY) wildlifescanner
+
+.PHONY: hooks
+hooks: install
+	$(PRECOMMIT) install
+	$(PRECOMMIT) run --all-files
 
 .PHONY: test
 test:

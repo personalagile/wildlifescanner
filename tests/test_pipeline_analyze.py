@@ -91,9 +91,7 @@ def test_analyze_and_extract_with_segments(
     out_dir = cfg.output_dir
     out_dir.mkdir(parents=True, exist_ok=True)
 
-    monkeypatch.setattr(
-        "wildlifescanner.pipeline.probe_video", lambda _p: (10.0, 10, 1.0)
-    )
+    monkeypatch.setattr("wildlifescanner.pipeline.probe_video", lambda _p: (10.0, 10, 1.0))
     _install_cv2_stub(monkeypatch, _CapStub(frames=3, opened=True))
 
     # Detector triggers activity on first frame

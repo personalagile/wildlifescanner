@@ -4,3 +4,4 @@ pytest-cov==6.2.1
 black==25.1.0
 ruff==0.12.9
 mypy==1.17.1
+pre-commit==3.7.1
