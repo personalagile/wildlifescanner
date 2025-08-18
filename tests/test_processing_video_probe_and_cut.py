@@ -59,12 +59,18 @@ def test_probe_video_cv2_ffmpeg_fallback(monkeypatch: pytest.MonkeyPatch):
     # frame_count will be 0 -> fallback to ffmpeg duration
     _install_cv2_stub(monkeypatch, opened=True, fps=0.0, frames=0)
 
-    class _FF:
-        @staticmethod
-        def probe(_p: str):
-            return {"streams": [{"codec_type": "video", "duration": "1.5"}]}
+    # stub subprocess.run used by _probe_duration_ffmpeg to emulate ffprobe json
+    calls: dict[str, object] = {}
 
-    monkeypatch.setitem(__import__("sys").modules, "ffmpeg", _FF)
+    class _Result:
+        def __init__(self, stdout: str) -> None:
+            self.stdout = stdout
+
+    def _run(cmd, *args, **kwargs):
+        calls["cmd"] = cmd
+        return _Result(stdout='{"streams": [{"codec_type": "video", "duration": "1.5"}]}')
+
+    monkeypatch.setattr(video_mod.subprocess, "run", _run)
     fps, count, dur = video_mod.probe_video(Path("x.mp4"))
     assert fps == 25.0  # default when cv2 fps is 0
     assert count == 0
@@ -72,96 +78,78 @@ def test_probe_video_cv2_ffmpeg_fallback(monkeypatch: pytest.MonkeyPatch):
 
 
 def test_cut_stream_copy_invokes_ffmpeg_chain(monkeypatch: pytest.MonkeyPatch, tmp_path: Path):
-    calls: dict[str, dict] = {"args": {}}
+    captured: dict[str, list[str]] = {}
 
-    class _Node:
-        def __init__(self, tag: str) -> None:
-            self.tag = tag
+    class _Result:
+        def __init__(self) -> None:
+            self.stdout = ""
+            self.stderr = ""
 
-        def output(self, out, t=None, c=None, movflags=None):
-            calls["args"]["output"] = {"out": out, "t": t, "c": c, "movflags": movflags}
-            return self
+    def _run(cmd, *args, **kwargs):
+        captured["cmd"] = cmd
+        return _Result()
 
-        def overwrite_output(self):
-            calls["args"]["overwrite"] = True
-            return self
-
-        def run(self, capture_stdout=False, capture_stderr=False):
-            calls["args"]["run"] = {"stdout": capture_stdout, "stderr": capture_stderr}
-            return None
-
-    class _FF:
-        @staticmethod
-        def input(inp, ss=None):
-            calls["args"]["input"] = {"inp": inp, "ss": ss}
-            return _Node("input")
-
-    monkeypatch.setitem(__import__("sys").modules, "ffmpeg", _FF)
+    monkeypatch.setattr(video_mod.subprocess, "run", _run)
 
     seg = VideoSegment(1.0, 3.5)
-    video_mod._cut_stream_copy(Path("in.mp4"), tmp_path / "o.mp4", seg)
+    inp = Path("in.mp4")
+    out = tmp_path / "o.mp4"
+    video_mod._cut_stream_copy(inp, out, seg)
 
-    assert calls["args"]["input"]["ss"] == pytest.approx(1.0)
-    assert calls["args"]["output"]["t"] == pytest.approx(2.5)
-    assert calls["args"]["output"]["c"] == "copy"
-    assert calls["args"]["output"]["movflags"] == "faststart"
-    assert calls["args"].get("overwrite") is True
-    assert calls["args"]["run"] == {"stdout": True, "stderr": True}
+    assert captured["cmd"] == [
+        "ffmpeg",
+        "-ss",
+        "1.0",
+        "-i",
+        str(inp),
+        "-t",
+        "2.5",
+        "-c",
+        "copy",
+        "-movflags",
+        "faststart",
+        "-y",
+        str(out),
+    ]
 
 
 def test_cut_reencode_invokes_ffmpeg_chain(monkeypatch: pytest.MonkeyPatch, tmp_path: Path):
-    calls: dict[str, dict] = {"args": {}}
+    captured: dict[str, list[str]] = {}
 
-    class _Node:
-        def __init__(self, tag: str) -> None:
-            self.tag = tag
+    class _Result:
+        def __init__(self) -> None:
+            self.stdout = ""
+            self.stderr = ""
 
-        def output(
-            self,
-            out,
-            t=None,
-            vcodec=None,
-            acodec=None,
-            preset=None,
-            crf=None,
-            movflags=None,
-        ):
-            calls["args"]["output"] = {
-                "out": out,
-                "t": t,
-                "vcodec": vcodec,
-                "acodec": acodec,
-                "preset": preset,
-                "crf": crf,
-                "movflags": movflags,
-            }
-            return self
+    def _run(cmd, *args, **kwargs):
+        captured["cmd"] = cmd
+        return _Result()
 
-        def overwrite_output(self):
-            calls["args"]["overwrite"] = True
-            return self
-
-        def run(self, capture_stdout=False, capture_stderr=False):
-            calls["args"]["run"] = {"stdout": capture_stdout, "stderr": capture_stderr}
-            return None
-
-    class _FF:
-        @staticmethod
-        def input(inp, ss=None):
-            calls["args"]["input"] = {"inp": inp, "ss": ss}
-            return _Node("input")
-
-    monkeypatch.setitem(__import__("sys").modules, "ffmpeg", _FF)
+    monkeypatch.setattr(video_mod.subprocess, "run", _run)
 
     seg = VideoSegment(2.0, 2.5)
-    video_mod._cut_reencode(Path("in.mp4"), tmp_path / "o.mp4", seg)
+    inp = Path("in.mp4")
+    out = tmp_path / "o.mp4"
+    video_mod._cut_reencode(inp, out, seg)
 
-    assert calls["args"]["input"]["ss"] == pytest.approx(2.0)
-    assert calls["args"]["output"]["t"] == pytest.approx(0.5)
-    assert calls["args"]["output"]["vcodec"] == "libx264"
-    assert calls["args"]["output"]["acodec"] == "aac"
-    assert calls["args"]["output"]["preset"] == "veryfast"
-    assert calls["args"]["output"]["crf"] == 22
-    assert calls["args"]["output"]["movflags"] == "faststart"
-    assert calls["args"].get("overwrite") is True
-    assert calls["args"]["run"] == {"stdout": True, "stderr": True}
+    assert captured["cmd"] == [
+        "ffmpeg",
+        "-ss",
+        "2.0",
+        "-i",
+        str(inp),
+        "-t",
+        "0.5",
+        "-vcodec",
+        "libx264",
+        "-acodec",
+        "aac",
+        "-preset",
+        "veryfast",
+        "-crf",
+        "22",
+        "-movflags",
+        "faststart",
+        "-y",
+        str(out),
+    ]

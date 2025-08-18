@@ -1,6 +1,8 @@
 from __future__ import annotations
 
+import json
 import logging
+import subprocess
 from collections.abc import Iterable
 from pathlib import Path
 
@@ -22,14 +24,26 @@ def probe_video(path: Path) -> tuple[float, int, float]:
 
 def _probe_duration_ffmpeg(path: Path) -> float:
     try:
-        import ffmpeg  # type: ignore
-
-        info = ffmpeg.probe(str(path))
+        cmd = [
+            "ffprobe",
+            "-v",
+            "error",
+            "-print_format",
+            "json",
+            "-show_streams",
+            "-show_format",
+            str(path),
+        ]
+        result = subprocess.run(cmd, check=True, capture_output=True, text=True)
+        info = json.loads(result.stdout or "{}")
         for s in info.get("streams", []):
             if s.get("codec_type") == "video":
                 dur = s.get("duration") or info.get("format", {}).get("duration")
                 if dur is not None:
                     return float(dur)
+        dur = info.get("format", {}).get("duration")
+        if dur is not None:
+            return float(dur)
     except Exception:
         pass
     return 0.0
@@ -65,34 +79,48 @@ def extract_segments(
 
 
 def _cut_stream_copy(inp: Path, out: Path, seg: VideoSegment) -> None:
-    import ffmpeg  # type: ignore
-
     start = max(0.0, seg.start)
     dur = max(0.0, seg.end - seg.start)
-    (
-        ffmpeg.input(str(inp), ss=start)
-        .output(str(out), t=dur, c="copy", movflags="faststart")
-        .overwrite_output()
-        .run(capture_stdout=True, capture_stderr=True)
-    )
+    cmd = [
+        "ffmpeg",
+        "-ss",
+        f"{start}",
+        "-i",
+        str(inp),
+        "-t",
+        f"{dur}",
+        "-c",
+        "copy",
+        "-movflags",
+        "faststart",
+        "-y",
+        str(out),
+    ]
+    subprocess.run(cmd, check=True, capture_output=True, text=True)
 
 
 def _cut_reencode(inp: Path, out: Path, seg: VideoSegment) -> None:
-    import ffmpeg  # type: ignore
-
     start = max(0.0, seg.start)
     dur = max(0.0, seg.end - seg.start)
-    (
-        ffmpeg.input(str(inp), ss=start)
-        .output(
-            str(out),
-            t=dur,
-            vcodec="libx264",
-            acodec="aac",
-            preset="veryfast",
-            crf=22,
-            movflags="faststart",
-        )
-        .overwrite_output()
-        .run(capture_stdout=True, capture_stderr=True)
-    )
+    cmd = [
+        "ffmpeg",
+        "-ss",
+        f"{start}",
+        "-i",
+        str(inp),
+        "-t",
+        f"{dur}",
+        "-vcodec",
+        "libx264",
+        "-acodec",
+        "aac",
+        "-preset",
+        "veryfast",
+        "-crf",
+        "22",
+        "-movflags",
+        "faststart",
+        "-y",
+        str(out),
+    ]
+    subprocess.run(cmd, check=True, capture_output=True, text=True)

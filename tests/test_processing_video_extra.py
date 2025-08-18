@@ -10,26 +10,23 @@ from wildlifescanner.processing import video as video_mod
 
 
 def test_probe_duration_ffmpeg_ok(monkeypatch: pytest.MonkeyPatch):
-    class _FF:
-        @staticmethod
-        def probe(_p: str):
-            return {
-                "streams": [
-                    {"codec_type": "video", "duration": "1.23"},
-                ]
-            }
+    class _Result:
+        def __init__(self, stdout: str) -> None:
+            self.stdout = stdout
+            self.stderr = ""
 
-    monkeypatch.setitem(__import__("sys").modules, "ffmpeg", _FF)
+    def _run(_cmd, *args, **kwargs):
+        return _Result(stdout='{"streams": [{"codec_type": "video", "duration": "1.23"}]}')
+
+    monkeypatch.setattr(video_mod.subprocess, "run", _run)
     assert video_mod._probe_duration_ffmpeg(Path("x.mp4")) == pytest.approx(1.23)
 
 
 def test_probe_duration_ffmpeg_exception(monkeypatch: pytest.MonkeyPatch):
-    class _FF:
-        @staticmethod
-        def probe(_p: str):
-            raise RuntimeError("boom")
+    def _run(_cmd, *args, **kwargs):
+        raise RuntimeError("boom")
 
-    monkeypatch.setitem(__import__("sys").modules, "ffmpeg", _FF)
+    monkeypatch.setattr(video_mod.subprocess, "run", _run)
     assert video_mod._probe_duration_ffmpeg(Path("x.mp4")) == 0.0
 
 
