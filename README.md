@@ -1,6 +1,6 @@
 # WildlifeScanner
 
- [![CI](https://github.com/personalagile/wildlifescanner/actions/workflows/ci.yml/badge.svg)](https://github.com/personalagile/wildlifescanner/actions/workflows/ci.yml)
+ [![CI](https://github.com/personalagile/wildlifescanner/actions/workflows/ci.yml/badge.svg)](https://github.com/personalagile/wildlifescanner/actions/workflows/ci.yml) [![codecov](https://codecov.io/gh/personalagile/wildlifescanner/branch/main/graph/badge.svg)](https://codecov.io/gh/personalagile/wildlifescanner)
 
 A lean, modular Python tool that watches an input directory for new videos, detects animal activity, and extracts only relevant segments into an output directory. Configuration is driven by a `.env` file in the input directory. Logs are written into the output directory.
 
