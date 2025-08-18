@@ -1,0 +1,16 @@
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.DS_Store
+.venv/
+.dist/
+.coverage
+htmlcov/
+.cache/
+.mypy_cache/
+*.log
+*.mp4
+*.avi
+*.mov
+*.mkv

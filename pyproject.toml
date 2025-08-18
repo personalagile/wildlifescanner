@@ -1,0 +1,38 @@
+[project]
+name = "wildlifescanner"
+version = "0.1.0"
+description = "Automatic extraction of animal activity from wildlife camera videos"
+authors = [
+  { name = "Your Name", email = "you@example.com" }
+]
+readme = "README.md"
+requires-python = ">=3.10"
+
+[tool.black]
+line-length = 100
+target-version = ["py310"]
+
+[tool.ruff]
+line-length = 100
+src = ["wildlifescanner", "tests"]
+select = [
+  "E", "F",   # pycodestyle + pyflakes
+  "I",         # isort
+  "UP",        # pyupgrade
+  "B",         # flake8-bugbear
+  "SIM",       # flake8-simplify
+]
+ignore = [
+]
+
+[tool.ruff.lint.isort]
+known-first-party = ["wildlifescanner"]
+
+[tool.pytest.ini_options]
+addopts = "-q --cov=wildlifescanner --cov-report=term-missing"
+testpaths = ["tests"]
+markers = [
+  "integration: long-running or heavy tests (e.g., model inference)",
+  "video_sets: iterate test video directories for presence/absence validation",
+]
+
