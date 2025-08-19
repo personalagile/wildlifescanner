@@ -150,18 +150,18 @@ Notes:
 ```mermaid
 flowchart TD
     P[Segment file p] --> Q{Post-processing enabled?}
-    Q -- No --> N[Skip post-process]
-    Q -- Yes --> T{tracking_enabled?}
-    T -- Yes --> D[Dynamic crop via cv2]
+    Q -->|No| N[Skip post-process]
+    Q -->|Yes| T{tracking_enabled?}
+    T -->|Yes| D[Dynamic crop via cv2]
     D --> C{Processed tmp written?}
-    T -- No --> Z[Static crop via FFmpeg (union bbox)]
+    T -->|No| Z[Static crop via FFmpeg - union bbox]
     Z --> B{BBox found?}
-    B -- No --> K1[No detections -> keep original p]
-    B -- Yes --> C
-    C -- No --> K2[No post-processing applied -> keep original p]
-    C -- Yes --> R{KEEP_POSTPROCESSED?}
-    R -- Yes --> KP[Keep p and tmp (_track/_zoom)]
-    R -- No --> RP[Replace p with tmp]
+    B -->|No| K1[No detections; keep original p]
+    B -->|Yes| C
+    C -->|No| K2[No post-processing applied; keep original p]
+    C -->|Yes| R{KEEP_POSTPROCESSED?}
+    R -->|Yes| KP[Keep p and tmp (_track/_zoom)]
+    R -->|No| RP[Replace p with tmp]
 ```
 
 - `tmp` name: `p.stem + ("_track" if tracking else "_zoom") + p.suffix` per `pipeline.analyze_and_extract()`.
