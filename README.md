@@ -13,6 +13,18 @@ A lean, modular Python tool that watches an input directory for new videos, dete
 - Optional post-processing: zoom (static crop via FFmpeg) and tracking (dynamic crop via OpenCV) with smoothing, deadzone, and optional aspect lock
 - Configurable retention: `KEEP_POSTPROCESSED=true` keeps processed files with `_zoom`/`_track` suffix; otherwise originals are replaced
 
+## Quick Start
+```bash
+make install
+mkdir -p input output
+# optional: seed defaults
+cp .env.example input/.env
+# drop MP4s into input/
+make run INPUT=./input OUTPUT=./output
+# or
+python -m wildlifescanner --input input --output output
+```
+
 ## Requirements
 - Python 3.10+
 - FFmpeg installed and available on PATH (`ffmpeg`)
