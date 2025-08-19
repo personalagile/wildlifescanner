@@ -46,6 +46,44 @@ The program automatically loads `.env` from the input directory and applies thos
 - Minimum output resolution: `MIN_OUTPUT_WIDTH` x `MIN_OUTPUT_HEIGHT`.
 - File retention: if `KEEP_POSTPROCESSED=true`, processed files are kept alongside originals with `_zoom`/`_track` suffix; otherwise the original segment is replaced.
 
+### Examples
+
+- __Zoom and replace originals__
+  - `input/.env`:
+  ```env
+  ZOOM_ENABLED=true
+  MIN_OUTPUT_WIDTH=960
+  MIN_OUTPUT_HEIGHT=540
+  KEEP_POSTPROCESSED=false
+  ```
+  - Run:
+  ```bash
+  python -m wildlifescanner --input input --output output
+  ```
+  - Result: segments like `VID_seg001_...MP4` are cropped/zoomed and the originals are replaced (no `_zoom` file kept).
+
+- __Tracking and keep processed alongside originals__
+  - `input/.env`:
+  ```env
+  TRACKING_ENABLED=true
+  KEEP_POSTPROCESSED=true
+  MIN_OUTPUT_WIDTH=960
+  MIN_OUTPUT_HEIGHT=540
+  # optional tuning
+  TRACKING_CENTER_ALPHA=0.05
+  TRACKING_SIZE_ALPHA=0.04
+  TRACKING_MAX_MOVE_FRAC=0.05
+  TRACKING_MAX_ZOOM_FRAC=0.06
+  TRACKING_CENTER_DEADZONE_FRAC=0.10
+  TRACKING_ZOOM_DEADZONE_FRAC=0.12
+  TRACKING_MARGIN=0.20
+  ```
+  - Run:
+  ```bash
+  python -m wildlifescanner --input input --output output
+  ```
+  - Result: in addition to `VID_seg001_...MP4`, a `VID_seg001_..._track.MP4` is kept. If both `TRACKING_ENABLED` and `ZOOM_ENABLED` are `true`, tracking takes precedence.
+
 ## Configuration (.env in the input directory)
 See `.env.example`. Important keys:
 - INPUT_DIR: recommended via CLI, but can be set here
