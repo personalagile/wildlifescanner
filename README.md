@@ -1,6 +1,6 @@
 # WildlifeScanner
 
- [![CI](https://github.com/personalagile/wildlifescanner/actions/workflows/ci.yml/badge.svg)](https://github.com/personalagile/wildlifescanner/actions/workflows/ci.yml) [![codecov](https://codecov.io/gh/personalagile/wildlifescanner/branch/main/graph/badge.svg)](https://codecov.io/gh/personalagile/wildlifescanner)
+[![CI](https://github.com/personalagile/wildlifescanner/actions/workflows/ci.yml/badge.svg)](https://github.com/personalagile/wildlifescanner/actions/workflows/ci.yml) [![codecov](https://codecov.io/gh/personalagile/wildlifescanner/branch/main/graph/badge.svg)](https://codecov.io/gh/personalagile/wildlifescanner)
 
 A lean, modular Python tool that watches an input directory for new videos, detects animal activity, and extracts only relevant segments into an output directory. Configuration is driven by a `.env` file in the input directory. Logs are written into the output directory.
 
@@ -10,7 +10,8 @@ A lean, modular Python tool that watches an input directory for new videos, dete
 - Segmentation with pre-roll, post-roll, minimum duration, and merge gap
 - Video cutting via FFmpeg (stream copy with re-encode fallback)
 - Clean logs, tests, and code quality (ruff, black, pytest)
-- Prepared interface for future dynamic cropping/tracking
+- Optional post-processing: zoom (static crop via FFmpeg) and tracking (dynamic crop via OpenCV) with smoothing, deadzone, and optional aspect lock
+- Configurable retention: `KEEP_POSTPROCESSED=true` keeps processed files with `_zoom`/`_track` suffix; otherwise originals are replaced
 
 ## Requirements
 - Python 3.10+
@@ -40,6 +41,11 @@ python -m wildlifescanner --input /data/wildlife/input --output /data/wildlife/o
 
 The program automatically loads `.env` from the input directory and applies those settings.
 
+## Post-processing (zoom/tracking)
+- Enable with `ZOOM_ENABLED=true` (static crop) or `TRACKING_ENABLED=true` (dynamic crop + smoothing).
+- Minimum output resolution: `MIN_OUTPUT_WIDTH` x `MIN_OUTPUT_HEIGHT`.
+- File retention: if `KEEP_POSTPROCESSED=true`, processed files are kept alongside originals with `_zoom`/`_track` suffix; otherwise the original segment is replaced.
+
 ## Configuration (.env in the input directory)
 See `.env.example`. Important keys:
 - INPUT_DIR: recommended via CLI, but can be set here
@@ -49,6 +55,11 @@ See `.env.example`. Important keys:
 - CONFIDENCE_THRESHOLD: e.g., 0.25
 - FRAME_STRIDE: e.g., 5 (infer every 5th frame)
 - PREROLL_SEC, POSTROLL_SEC, MIN_ACTIVITY_SEC, MERGE_GAP_SEC
+- ZOOM_ENABLED, TRACKING_ENABLED, KEEP_POSTPROCESSED
+- MIN_OUTPUT_WIDTH, MIN_OUTPUT_HEIGHT
+- Tracking smoothing (advanced): `TRACKING_CENTER_ALPHA`, `TRACKING_SIZE_ALPHA`,
+  `TRACKING_MAX_MOVE_FRAC`, `TRACKING_MAX_ZOOM_FRAC`, `TRACKING_CENTER_DEADZONE_FRAC`,
+  `TRACKING_ZOOM_DEADZONE_FRAC`, `TRACKING_MARGIN`
 
 ## Test video sets (positive/negative)
 - Place your test videos here:

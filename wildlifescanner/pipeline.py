@@ -1,12 +1,17 @@
 from __future__ import annotations
 
+import contextlib
 import logging
 from pathlib import Path
 
 from .config import AppConfig
 from .detectors.base import AnimalDetector
 from .models import VideoSegment
-from .processing.video import extract_segments, probe_video
+from .processing.video import (
+    extract_segments,
+    postprocess_zoom_and_tracking,
+    probe_video,
+)
 from .segmenter import compute_segments
 
 VIDEO_EXTS = (".mp4", ".mov", ".avi", ".mkv", ".m4v")
@@ -75,4 +80,61 @@ def analyze_and_extract(
     logger.info(f"Detected segments: {[(round(s.start, 2), round(s.end, 2)) for s in segments]}")
 
     outputs = extract_segments(video_path, cfg.output_dir, segments, logger)
+
+    # Optional zoom/tracking post-process (disabled by default)
+    if cfg.zoom_enabled or cfg.tracking_enabled:
+        logger.info(
+            "Post-processing enabled (tracking=%s, zoom=%s) for %d segment(s)",
+            cfg.tracking_enabled,
+            cfg.zoom_enabled,
+            len(outputs),
+        )
+        processed_paths: list[Path] = []
+        keep_post = getattr(cfg, "keep_postprocessed", False)
+        for p in outputs:
+            tmp = p.with_name(p.stem + ("_track" if cfg.tracking_enabled else "_zoom") + p.suffix)
+            logger.info("Post-processing segment: %s -> %s", p.name, tmp.name)
+            changed = False
+            try:
+                changed = postprocess_zoom_and_tracking(
+                    input_video=p,
+                    output_video=tmp,
+                    cfg=cfg,
+                    detector=detector,
+                    logger=logger,
+                )
+                if changed:
+                    if keep_post:
+                        # Keep processed file alongside original
+                        logger.info(
+                            "Keeping post-processed file alongside original: %s",
+                            tmp.name,
+                        )
+                    else:
+                        # Replace original with processed file
+                        tmp.replace(p)
+                        logger.info(
+                            "Replaced original with post-processed result: %s",
+                            p.name,
+                        )
+                else:
+                    logger.info(
+                        "No post-processing applied or no detections for: %s (original kept)",
+                        p.name,
+                    )
+            except Exception as e:
+                logger.exception("Post-processing failed for %s: %s", p.name, e)
+            finally:
+                # Clean up tmp if it still exists (e.g., on failure or already moved)
+                if tmp.exists():
+                    # If keeping processed, do not delete
+                    if keep_post and changed:
+                        pass
+                    else:
+                        with contextlib.suppress(Exception):
+                            tmp.unlink()
+                            logger.info("Cleaned up temporary file: %s", tmp.name)
+            processed_paths.append(p)
+        return processed_paths
+
     return outputs

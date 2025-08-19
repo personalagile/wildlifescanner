@@ -42,6 +42,24 @@ class AppConfig:
 
     log_level: str = "INFO"
 
+    # Tracking/Zooming options
+    zoom_enabled: bool = False
+    tracking_enabled: bool = False
+    # Minimal output resolution for zoomed videos (width x height)
+    min_output_width: int = 640
+    min_output_height: int = 360
+    # If True, keep post-processed file with suffix instead of replacing original
+    keep_postprocessed: bool = False
+
+    # Tracking smoothing parameters (tunable)
+    tracking_center_alpha: float = 0.05
+    tracking_size_alpha: float = 0.04
+    tracking_max_move_frac: float = 0.05
+    tracking_max_zoom_frac: float = 0.06
+    tracking_center_deadzone_frac: float = 0.10
+    tracking_zoom_deadzone_frac: float = 0.12
+    tracking_margin: float = 0.20
+
 
 def _get_env_from_file(env_path: Path) -> dict[str, str]:
     if env_path.exists():
@@ -61,6 +79,17 @@ def _coerce_int(value: str | None, default: int) -> int:
         return int(value) if value is not None else default
     except ValueError:
         return default
+
+
+def _coerce_bool(value: str | None, default: bool) -> bool:
+    if value is None:
+        return default
+    v = value.strip().lower()
+    if v in {"1", "true", "yes", "on"}:
+        return True
+    if v in {"0", "false", "no", "off"}:
+        return False
+    return default
 
 
 def load_config(
@@ -125,6 +154,25 @@ def load_config(
 
     log_level = env_from_input.get("LOG_LEVEL", "INFO").upper()
 
+    # 5) Tracking/Zooming
+    zoom_enabled = _coerce_bool(env_from_input.get("ZOOM_ENABLED"), False)
+    tracking_enabled = _coerce_bool(env_from_input.get("TRACKING_ENABLED"), False)
+    min_output_width = _coerce_int(env_from_input.get("MIN_OUTPUT_WIDTH"), 640)
+    min_output_height = _coerce_int(env_from_input.get("MIN_OUTPUT_HEIGHT"), 360)
+    keep_postprocessed = _coerce_bool(env_from_input.get("KEEP_POSTPROCESSED"), False)
+
+    tracking_center_alpha = _coerce_float(env_from_input.get("TRACKING_CENTER_ALPHA"), 0.05)
+    tracking_size_alpha = _coerce_float(env_from_input.get("TRACKING_SIZE_ALPHA"), 0.04)
+    tracking_max_move_frac = _coerce_float(env_from_input.get("TRACKING_MAX_MOVE_FRAC"), 0.05)
+    tracking_max_zoom_frac = _coerce_float(env_from_input.get("TRACKING_MAX_ZOOM_FRAC"), 0.06)
+    tracking_center_deadzone_frac = _coerce_float(
+        env_from_input.get("TRACKING_CENTER_DEADZONE_FRAC"), 0.10
+    )
+    tracking_zoom_deadzone_frac = _coerce_float(
+        env_from_input.get("TRACKING_ZOOM_DEADZONE_FRAC"), 0.12
+    )
+    tracking_margin = _coerce_float(env_from_input.get("TRACKING_MARGIN"), 0.20)
+
     # Ensure the output directory exists (test expectation)
     with contextlib.suppress(Exception):
         output_dir.mkdir(parents=True, exist_ok=True)
@@ -145,4 +193,16 @@ def load_config(
         file_stability_seconds=file_stability_seconds,
         poll_interval_seconds=poll_interval_seconds,
         log_level=log_level,
+        zoom_enabled=zoom_enabled,
+        tracking_enabled=tracking_enabled,
+        min_output_width=min_output_width,
+        min_output_height=min_output_height,
+        tracking_center_alpha=tracking_center_alpha,
+        tracking_size_alpha=tracking_size_alpha,
+        tracking_max_move_frac=tracking_max_move_frac,
+        tracking_max_zoom_frac=tracking_max_zoom_frac,
+        tracking_center_deadzone_frac=tracking_center_deadzone_frac,
+        tracking_zoom_deadzone_frac=tracking_zoom_deadzone_frac,
+        tracking_margin=tracking_margin,
+        keep_postprocessed=keep_postprocessed,
     )

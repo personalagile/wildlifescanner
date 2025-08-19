@@ -14,6 +14,7 @@ def test_load_config_defaults(tmp_path: Path):
     assert cfg.input_dir == input_dir
     assert cfg.output_dir.exists()
     assert cfg.detector in {"YOLO", "MEGADETECTOR"}
+    assert cfg.keep_postprocessed is False
 
 
 def test_load_config_env_override(tmp_path: Path):
@@ -38,3 +39,17 @@ ANIMAL_CLASSES=fox, deer
     assert cfg.preroll_sec == 2.5
     assert cfg.min_activity_sec == 0.7
     assert cfg.animal_classes == ("fox", "deer")
+
+
+def test_load_config_keep_postprocessed_env(tmp_path: Path):
+    input_dir = tmp_path / "input"
+    input_dir.mkdir()
+    env = input_dir / ".env"
+    env.write_text(
+        """
+KEEP_POSTPROCESSED=true
+        """.strip()
+    )
+
+    cfg = load_config(input_dir, None, None)
+    assert cfg.keep_postprocessed is True
