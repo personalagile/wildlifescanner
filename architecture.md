@@ -110,42 +110,6 @@ User drops video -> Watcher detects -> wait_until_stable
       -> write outputs + log results
 ```
 
-### Post-processing flow (detailed)
-```
-+--------------------+
-| Segment file (p)   |
-+----------+---------+
-             |
-             v
-     Is postprocessing enabled?
-     (cfg.tracking_enabled or cfg.zoom_enabled)
-             | yes                             no
-             v                                  v
-    +-------------------+                       [skip]
-    | tracking_enabled? |                         |
-    +----+--------------+                         v
-         | yes                     no        [leave original p]
-         v                         v
-  [dynamic crop via cv2]    [compute_union_bbox]
-         |                         |
-         v                         v
-   produced tmp?                bbox found?
-         | yes   no               | yes   no
-         v       v                v       v
-    [tmp exists] keep p     [static crop] keep p
-         |                         |
-         v                         v
-   KEEP_POSTPROCESSED?        KEEP_POSTPROCESSED?
-         | yes     no              | yes     no
-         v         v               v         v
-   keep p & tmp  replace p     keep p & tmp  replace p
-                with tmp                    with tmp
-```
-
-Notes:
-- File naming: temporary processed file is `p.stem + ("_track"|"_zoom") + p.suffix`.
-- If zoom path finds no detections (no bbox), the original `p` is kept.
-
 ### Post-processing flow (Mermaid)
 ```mermaid
 flowchart TD
