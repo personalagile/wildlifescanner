@@ -17,6 +17,16 @@ def build_parser() -> argparse.ArgumentParser:
         choices=["YOLO", "MEGADETECTOR"],
         help="Detector selection (overrides .env)",
     )
+    parser.add_argument(
+        "--ab-test",
+        action="store_true",
+        help="Enable A/B mode and process each video with multiple detectors",
+    )
+    parser.add_argument(
+        "--ab-detectors",
+        type=str,
+        help='Comma-separated list of detectors for A/B mode, e.g. "YOLO,MEGADETECTOR"',
+    )
     return parser
 
 

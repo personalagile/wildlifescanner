@@ -23,6 +23,14 @@ def create_detector(
             allowed_classes=allowed_classes,
         )
     elif name_u == "MEGADETECTOR":
-        raise NotImplementedError("MegaDetector is not integrated yet. Please use 'YOLO'.")
+        # Lazy import so tests can stub this module without ultralytics installed
+        from .megadetector import MegaDetector
+
+        return MegaDetector(
+            model_path=yolo_model,
+            confidence=confidence,
+            iou=iou,
+            allowed_classes=allowed_classes,
+        )
     else:
         raise ValueError(f"Unknown detector: {name}")

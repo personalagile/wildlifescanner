@@ -51,6 +51,13 @@ class AppConfig:
     # If True, keep post-processed file with suffix instead of replacing original
     keep_postprocessed: bool = False
 
+    # MegaDetector (PyTorch) model path
+    megadetector_model: str = ""
+
+    # A/B testing
+    ab_test: bool = False
+    ab_detectors: tuple[str, ...] = ()
+
     # Tracking smoothing parameters (tunable)
     tracking_center_alpha: float = 0.05
     tracking_size_alpha: float = 0.04
@@ -125,6 +132,11 @@ def load_config(
 
     # 4) Additional parameters
     yolo_model = env_from_input.get("YOLO_MODEL", "yolov8n.pt")
+    megadetector_model = env_from_input.get("MEGADETECTOR_MODEL", "")
+    # A/B testing
+    ab_test = _coerce_bool(env_from_input.get("AB_TEST"), False)
+    ab_detectors_env = env_from_input.get("AB_DETECTORS", "")
+    ab_detectors = tuple(s.strip().upper() for s in ab_detectors_env.split(",") if s.strip())
     animal_classes = tuple(
         s.strip() for s in env_from_input.get("ANIMAL_CLASSES", "").split(",") if s.strip()
     ) or (
@@ -182,6 +194,9 @@ def load_config(
         output_dir=output_dir,
         detector=detector,
         yolo_model=yolo_model,
+        megadetector_model=megadetector_model,
+        ab_test=ab_test,
+        ab_detectors=ab_detectors,
         animal_classes=animal_classes,
         confidence_threshold=confidence_threshold,
         nms_iou=nms_iou,

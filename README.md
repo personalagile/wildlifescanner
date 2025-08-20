@@ -6,7 +6,7 @@ A lean, modular Python tool that watches an input directory for new videos, dete
 
 ## Features
 - Directory watching (watchdog)
-- Pluggable detectors (base interface); default: YOLO (Ultralytics)
+- Pluggable detectors (base interface); default: YOLO (Ultralytics). Also supports MegaDetector (PyTorch).
 - Segmentation with pre-roll, post-roll, minimum duration, and merge gap
 - Video cutting via FFmpeg (stream copy with re-encode fallback)
 - Clean logs, tests, and code quality (ruff, black, pytest)
@@ -100,8 +100,11 @@ The program automatically loads `.env` from the input directory and applies thos
 See `.env.example`. Important keys:
 - INPUT_DIR: recommended via CLI, but can be set here
 - OUTPUT_DIR: target directory for extracted segments and logs
-- DETECTOR: "YOLO" (default) or future "MEGADETECTOR"
-- YOLO_MODEL: path or model name (e.g., `yolov8n.pt`)
+- DETECTOR: "YOLO" (default) or "MEGADETECTOR"
+- YOLO_MODEL: path or model name (e.g., `yolov8n.pt`). Used for YOLO and as a fallback for MegaDetector.
+- MEGADETECTOR_MODEL: optional path to the MegaDetector `.pt` weights (PyTorch). If unset and `DETECTOR=MEGADETECTOR`, falls back to `YOLO_MODEL`.
+- AB_TEST: `true` to process each video with multiple detectors (writes into per-detector subfolders)
+- AB_DETECTORS: comma-separated list, e.g. `YOLO,MEGADETECTOR`
 - CONFIDENCE_THRESHOLD: e.g., 0.25
 - FRAME_STRIDE: e.g., 5 (infer every 5th frame)
 - PREROLL_SEC, POSTROLL_SEC, MIN_ACTIVITY_SEC, MERGE_GAP_SEC
@@ -145,6 +148,52 @@ Optional environment for mixed ops on macOS:
 export PYTORCH_ENABLE_MPS_FALLBACK=1
 ```
 This lets unsupported operators fall back to CPU instead of failing.
+
+## MegaDetector (PyTorch) usage
+- Set in `input/.env`:
+  ```env
+  DETECTOR=MEGADETECTOR
+  # Optional: path to MD weights; if omitted, falls back to YOLO_MODEL
+  MEGADETECTOR_MODEL=/path/to/megadetector.pt
+  # IMPORTANT: MegaDetector classes differ from COCO. Use at least:
+  ANIMAL_CLASSES=animal  # or: animal,person,vehicle
+  ```
+  - Run with Makefile or CLI:
+  ```bash
+  make run INPUT=./input OUTPUT=./output DETECTOR=MEGADETECTOR
+  # or
+  python -m wildlifescanner --input input --output output --detector MEGADETECTOR
+  ```
+
+### MegaDetector model weights (download)
+- Official repo and docs: <https://github.com/microsoft/CameraTraps> (see `megadetector.md`).
+- Releases page (recommended weights, e.g., MDv5): <https://github.com/microsoft/CameraTraps/releases>.
+- LILA Science mirror: <https://lila.science/datasets/megadetector>.
+
+After downloading a `.pt` file, point `MEGADETECTOR_MODEL` to it in your `input/.env`:
+```env
+DETECTOR=MEGADETECTOR
+MEGADETECTOR_MODEL=/absolute/path/to/md_v5.pt
+# Classes typically include: animal, person, vehicle
+ANIMAL_CLASSES=animal
+```
+If `MEGADETECTOR_MODEL` is not set, the app will fall back to `YOLO_MODEL`.
+
+## A/B testing: YOLO vs MegaDetector
+- Configure in `input/.env`:
+  ```env
+  AB_TEST=true
+  AB_DETECTORS=YOLO,MEGADETECTOR
+  ```
+- Or via CLI:
+  ```bash
+  python -m wildlifescanner --input input --output output \
+    --ab-test --ab-detectors YOLO,MEGADETECTOR
+  ```
+- Outputs are written into per-detector subfolders under your output directory:
+  - `ab-YOLO/...`
+  - `ab-MEGADETECTOR/...`
+- All other settings (stride, thresholds, post-processing) are shared; each run uses the respective model path (`YOLO_MODEL` or `MEGADETECTOR_MODEL`).
 
 ## Notes on species coverage
 The default (COCO) model detects a subset of classes (e.g., bird, dog, cat, horse, sheep, cow, elephant, bear, zebra, giraffe). For species common in Germany (e.g., fox, wild boar, roe deer), consider MegaDetector or a fine-tuned YOLO model. The detector interface is modular to allow easy replacement.

@@ -34,6 +34,7 @@ Version: 0.2
 | Output Directory|               | External Tools     |
 |  - segments     |               |  - FFmpeg          |
 |  - logs         |               |  - YOLO weights    |
+|  - ab-<detector> subfolders in A/B mode           |
 +-----------------+               +--------------------+
 ```
 
@@ -41,7 +42,8 @@ Version: 0.2
 - Separate concerns: detection, segmentation, processing (cutting), orchestration.
 - Lazy import heavy deps (cv2, ffmpeg) to keep tests light.
 - Stream-copy segments with FFmpeg; fallback to re-encode on failure.
-- Provide base detector interface; default YOLO implementation; future MegaDetector support.
+- Provide base detector interface; default YOLO implementation; MegaDetector (PyTorch) support.
+- A/B testing mode: run multiple detectors on the same inputs, writing outputs into per-detector subfolders (`ab-YOLO`, `ab-MEGADETECTOR`).
 - Watch input directory; process when files become stable.
 
 ## 5. Building Block View
@@ -86,12 +88,14 @@ Version: 0.2
 
 ### Level 2 (Key responsibilities)
 - `wildlifescanner/cli.py`: `build_parser()`, `parse_args()`.
-- `wildlifescanner/config.py`: `AppConfig`, `load_config()` preferring CLI over `.env` over defaults; flags include `zoom_enabled`, `tracking_enabled`, `keep_postprocessed`, `min_output_width/height`, and tracking smoothing params.
+- `wildlifescanner/config.py`: `AppConfig`, `load_config()` preferring CLI over `.env` over defaults; flags include `zoom_enabled`, `tracking_enabled`, `keep_postprocessed`, `min_output_width/height`, tracking smoothing params, and A/B flags `AB_TEST`, `AB_DETECTORS`.
+- `wildlifescanner/main.py`: orchestrates single-detector mode and A/B mode (loops over detectors, writes to `ab-<NAME>` subfolders), resolves model path per detector (`YOLO_MODEL` vs `MEGADETECTOR_MODEL`).
 - `wildlifescanner/logging_setup.py`: console and file handlers.
 - `wildlifescanner/watcher.py`: `watch_directory()`, `wait_until_stable()`.
 - `wildlifescanner/pipeline.py`: `is_video_file()`, `analyze_and_extract()` coordinates detection->segment->cut; optionally runs post-processing and honors `keep_postprocessed` (keep with suffix vs replace original).
 - `wildlifescanner/detectors/base.py`: `AnimalDetector` interface.
 - `wildlifescanner/detectors/yolo.py`: `YOLODetector` using Ultralytics.
+- `wildlifescanner/detectors/megadetector.py`: `MegaDetector` (PyTorch/Ultralytics backend).
 - `wildlifescanner/processing/video.py`: `probe_video()`, `extract_segments()`, `postprocess_zoom_and_tracking()` (uses FFmpeg crop/scale for zoom and OpenCV for dynamic tracking), plus helpers `_compute_union_bbox`, `_expand_to_minimum`.
 - `wildlifescanner/segmenter.py`: `compute_segments()`.
 
@@ -109,6 +113,11 @@ User drops video -> Watcher detects -> wait_until_stable
             else: replace original segment file
       -> write outputs + log results
 ```
+
+A/B mode specifics:
+- `main` loops over detectors from `AB_DETECTORS` (default: YOLO, MEGADETECTOR when `AB_TEST=true`).
+- For each detector, `output_dir` is rewritten to `<base_output>/ab-<DETECTOR>` and the pipeline runs once per detector.
+- Model resolution per detector: YOLO -> `YOLO_MODEL`; MEGADETECTOR -> `MEGADETECTOR_MODEL` if set, else falls back to `YOLO_MODEL`.
 
 ### Post-processing flow (Mermaid)
 ```mermaid
@@ -143,13 +152,14 @@ flowchart TD
 Single-process Python app, watching a local directory.
 
 ## 8. Cross-cutting Concepts
-- Configuration: `.env` loaded from input directory; CLI can override. Post-processing is disabled by default and controlled via `ZOOM_ENABLED`, `TRACKING_ENABLED`, `KEEP_POSTPROCESSED`, `MIN_OUTPUT_WIDTH`, `MIN_OUTPUT_HEIGHT`, and tracking smoothing parameters (`TRACKING_CENTER_ALPHA`, `TRACKING_SIZE_ALPHA`, `TRACKING_MAX_MOVE_FRAC`, `TRACKING_MAX_ZOOM_FRAC`, `TRACKING_CENTER_DEADZONE_FRAC`, `TRACKING_ZOOM_DEADZONE_FRAC`, `TRACKING_MARGIN`).
+- Configuration: `.env` loaded from input directory; CLI can override. Post-processing is disabled by default and controlled via `ZOOM_ENABLED`, `TRACKING_ENABLED`, `KEEP_POSTPROCESSED`, `MIN_OUTPUT_WIDTH`, `MIN_OUTPUT_HEIGHT`, and tracking smoothing parameters (`TRACKING_CENTER_ALPHA`, `TRACKING_SIZE_ALPHA`, `TRACKING_MAX_MOVE_FRAC`, `TRACKING_MAX_ZOOM_FRAC`, `TRACKING_CENTER_DEADZONE_FRAC`, `TRACKING_ZOOM_DEADZONE_FRAC`, `TRACKING_MARGIN`). A/B mode is controlled via `AB_TEST` and `AB_DETECTORS`.
 - Logging: structured format to console and `wildlifescanner.log` in output dir.
 - Error handling: cautious with IO; falls back on re-encode; watcher waits for stable files.
-- Performance: frame stride; YOLO confidence/IoU; stream-copy to avoid re-encode.
+- Performance: frame stride; detector confidence/IoU; stream-copy to avoid re-encode.
 - Testability: lazy imports; dummy/unit tests; optional video-set integration tests behind env flag.
 - Post-processing retention: default is replace original; with `KEEP_POSTPROCESSED=true`, keep processed outputs alongside originals using `_zoom`/`_track` suffix.
 - Dependencies: OpenCV used only when tracking is enabled (lazy-imported in processing path); FFmpeg/ffprobe required.
+- Detector models: `YOLO_MODEL` (Ultralytics weights or alias) and optional `MEGADETECTOR_MODEL` when using MegaDetector.
 
 ## 9. Architectural Decisions (ADRs)
 - ADR-001: Use YOLOv8 (Ultralytics) as default detector.
@@ -158,6 +168,7 @@ Single-process Python app, watching a local directory.
 - ADR-004: `.env` in input dir for operational config.
 - ADR-005: Keep post-processed files is opt-in (`KEEP_POSTPROCESSED=false` by default) for backward compatibility.
 - ADR-006: Implement dynamic tracking via OpenCV with smoothing, deadzones, and per-frame clamps.
+- ADR-007: Implement A/B harness as sequential per-detector runs writing into `ab-<detector>` subfolders; choose sequential processing for simplicity and determinism; keep lazy imports to avoid heavy deps in tests.
 
 ## 10. Quality Requirements
 - Reliability: skip unstable files; handle detector init errors; clear logs.
@@ -169,7 +180,7 @@ Single-process Python app, watching a local directory.
 - Detector model weights availability/network constraints.
 - FFmpeg incompatibilities on some platforms.
 - Class coverage limited by default COCO model.
-- Future: MegaDetector integration, tracking/cropping, batching.
+- A/B evaluation between YOLO and MegaDetector: mode increases compute (multiple passes per file); ensure clear output separation and consistent configs per run; potential backend trade-offs and batching.
 - OpenCV dependency and re-encode paths may impact performance on low-power devices.
 
 ## 12. Glossary
