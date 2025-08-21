@@ -4,7 +4,7 @@ from wildlifescanner.segmenter import compute_segments
 
 
 def test_compute_segments_basic_merge():
-    # Ereignisse dicht beisammen, sollten zusammengeführt werden
+    # Events close together should be merged
     times = [1.0, 1.3, 3.8]  # s
     segs = compute_segments(
         activity_times=times,
@@ -14,7 +14,7 @@ def test_compute_segments_basic_merge():
         min_activity_sec=0.1,
         merge_gap_sec=0.4,
     )
-    # Erwartung: [0.5..2.3] und [3.3..4.8]; der zweite Event erweitert das erste Intervall bis 2.3
+    # Expected: [0.5..2.3] and [3.3..4.8]; the second event extends the first interval to 2.3
     assert len(segs) == 2
     assert round(segs[0].start, 2) == 0.5
     assert round(segs[0].end, 2) == 2.3
@@ -23,7 +23,7 @@ def test_compute_segments_basic_merge():
 
 
 def test_compute_segments_min_duration():
-    # Sehr kurze Aktivität: sollte herausgefiltert werden
+    # Very short activity should be filtered out
     times = [5.0]
     segs = compute_segments(
         activity_times=times,
