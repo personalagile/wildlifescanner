@@ -73,7 +73,7 @@ jobs:
         run: |
           pytest --cov=wildlifescanner --cov-report=term-missing --cov-report=xml
       - name: Upload coverage to Codecov
-        uses: codecov/codecov-action@v4
+        uses: codecov/codecov-action@v5
         with:
           files: coverage.xml
           flags: py${{ matrix.python-version }}
